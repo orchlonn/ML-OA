@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Table Extraction Pipeline: GPT-4V (Vision) Approach
+Table Extraction Pipeline: GPT-5.2 (Vision) Approach
 ====================================================
-Uses OpenAI's GPT-4V to extract transaction data from a bank statement
+Uses OpenAI's GPT-5.2 to extract transaction data from a bank statement
 image. Unlike the Tesseract approach, this works across different banks
 and layouts without hardcoded markers or correction maps.
 
@@ -11,7 +11,7 @@ Dependencies:
 
 Usage:
     export OPENAI_API_KEY="your-key-here"
-    python extraction_gpt4v.py
+    python extraction_gpt.py
 """
 
 import os
@@ -33,13 +33,13 @@ def encode_image(image_path):
 
 def extract_transactions(client, image_path):
     """
-    Send the bank statement image to GPT-4V and ask it to extract
+    Send the bank statement image to GPT-5.2 and ask it to extract
     all transactions as structured JSON.
     """
     base64_image = encode_image(image_path)
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5.2",
         messages=[
             {
                 "role": "user",
@@ -70,7 +70,7 @@ def extract_transactions(client, image_path):
                 ],
             }
         ],
-        max_tokens=4096,
+        max_completion_tokens=4096,
     )
 
     raw = response.choices[0].message.content.strip()
@@ -133,8 +133,8 @@ def validate(output_path, reference_path):
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    image_path = os.path.join(script_dir, "img_sample2.jpg")
-    output_path = os.path.join(script_dir, "transactions_gpt4v2.csv")
+    image_path = os.path.join(script_dir, "img_sample.jpg")
+    output_path = os.path.join(script_dir, "transactions_gpt.csv")
     reference_path = os.path.join(script_dir, "csv_sample.csv")
 
     if not os.environ.get("OPENAI_API_KEY"):
@@ -148,7 +148,7 @@ def main():
     print(f"Output: {output_path}")
     print()
 
-    print("Step 1: Sending image to GPT-4V ...")
+    print("Step 1: Sending image to GPT-5.2 ...")
     transactions = extract_transactions(client, image_path)
     print(f"         Extracted {len(transactions)} transactions")
 
