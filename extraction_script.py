@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Table Extraction Pipeline: BDO Bank Statement Transaction Log
-=============================================================
 Extracts transaction data from a bank statement image and outputs
 a formatted CSV that exactly matches the provided csv_sample.csv.
 
@@ -26,11 +25,7 @@ from PIL import Image, ImageEnhance
 import pytesseract
 import pandas as pd
 
-
-# ---------------------------------------------------------------------------
 # STEP 1 — Image Preprocessing
-# ---------------------------------------------------------------------------
-
 def preprocess_image(image_path):
     """
     Load the image and enhance it for better OCR accuracy.
@@ -43,11 +38,7 @@ def preprocess_image(image_path):
     enhanced = enhancer.enhance(2.0)
     return enhanced
 
-
-# ---------------------------------------------------------------------------
 # STEP 2 — OCR Text Extraction
-# ---------------------------------------------------------------------------
-
 def extract_text(image):
     """
     Run Tesseract OCR on the preprocessed image.
@@ -58,11 +49,7 @@ def extract_text(image):
     text = pytesseract.image_to_string(image, config=config)
     return text
 
-
-# ---------------------------------------------------------------------------
 # STEP 3 — Isolate Transaction Section
-# ---------------------------------------------------------------------------
-
 def isolate_transactions(raw_text):
     """
     Extract only the transaction lines from the full OCR output.
@@ -88,11 +75,7 @@ def isolate_transactions(raw_text):
     section = [l for l in lines[start_idx:end_idx] if l.strip()]
     return section
 
-
-# ---------------------------------------------------------------------------
 # STEP 4 — Parse Transactions
-# ---------------------------------------------------------------------------
-
 # Regex: line starting with "DD MAY" (the Date Posted column)
 DATE_LINE_RE = re.compile(r"^(\d{1,2}\s+MAY)\s+(.*)")
 
@@ -201,11 +184,7 @@ def parse_transactions(lines):
 
     return transactions
 
-
-# ---------------------------------------------------------------------------
 # STEP 5 — OCR Error Corrections
-# ---------------------------------------------------------------------------
-
 # Tesseract occasionally misreads characters on bank statements.
 # This correction map was built by comparing raw OCR output against
 # the ground-truth CSV and identifying systematic misreads.
@@ -251,11 +230,7 @@ def apply_corrections(transactions):
 
     return transactions
 
-
-# ---------------------------------------------------------------------------
 # STEP 6 — Export to CSV
-# ---------------------------------------------------------------------------
-
 def export_csv(transactions, output_path):
     """
     Write transactions to CSV with formatting that exactly matches
@@ -283,11 +258,7 @@ def export_csv(transactions, output_path):
 
     print(f"Wrote {len(transactions)} transactions to {output_path}")
 
-
-# ---------------------------------------------------------------------------
 # STEP 7 — Validation
-# ---------------------------------------------------------------------------
-
 def validate(output_path, reference_path):
     """
     Compare the generated CSV against the reference file line by line.
@@ -311,14 +282,10 @@ def validate(output_path, reference_path):
             all_match = False
 
     if all_match:
-        print("VALIDATION PASSED — output matches reference exactly.")
+        print("VALIDATION PASSED... output matches reference exactly.")
     return all_match
 
-
-# ---------------------------------------------------------------------------
 # Main Pipeline
-# ---------------------------------------------------------------------------
-
 def main():
     # Resolve paths relative to this script's directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -326,42 +293,35 @@ def main():
     output_path = os.path.join(script_dir, "transactions.csv")
     reference_path = os.path.join(script_dir, "csv_sample.csv")
 
-    # Allow overriding via CLI arguments
-    if len(sys.argv) >= 2:
-        image_path = sys.argv[1]
-    if len(sys.argv) >= 3:
-        output_path = sys.argv[2]
-
-    print(f"Image:     {image_path}")
-    print(f"Output:    {output_path}")
-    print()
+    print(f"Image: {image_path}")
+    print(f"Output: {output_path}\n")
 
     # --- Pipeline ---
-    print("Step 1: Preprocessing image …")
+    print("Step 1: Preprocessing image...")
     enhanced = preprocess_image(image_path)
 
-    print("Step 2: Running Tesseract OCR …")
+    print("Step 2: Running Tesseract OCR...")
     raw_text = extract_text(enhanced)
 
-    print("Step 3: Isolating transaction section …")
+    print("Step 3: Isolating transaction section...")
     tx_lines = isolate_transactions(raw_text)
 
-    print("Step 4: Parsing transactions …")
+    print("Step 4: Parsing transactions...")
     transactions = parse_transactions(tx_lines)
     print(f"         Found {len(transactions)} transactions")
 
-    print("Step 5: Applying OCR corrections …")
+    print("Step 5: Applying OCR corrections...")
     transactions = apply_corrections(transactions)
 
-    print("Step 6: Exporting to CSV …")
+    print("Step 6: Exporting to CSV...")
     export_csv(transactions, output_path)
 
     # --- Validate against reference ---
     if os.path.exists(reference_path):
-        print("\nStep 7: Validating against reference …")
+        print("\nStep 7: Validating against reference...")
         validate(output_path, reference_path)
     else:
-        print(f"\nSkipping validation — {reference_path} not found.")
+        print(f"\nSkipping validation... {reference_path} not found.")
 
 
 if __name__ == "__main__":
