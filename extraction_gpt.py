@@ -144,13 +144,13 @@ def main():
 
     client = OpenAI()
 
-    print(f"Image:  {image_path}")
+    print(f"Image: {image_path}")
     print(f"Output: {output_path}")
     print()
 
     print("Step 1: Sending image to GPT-5.2 ...")
     transactions = extract_transactions(client, image_path)
-    print(f"         Extracted {len(transactions)} transactions")
+    print(f"Extracted {len(transactions)} transactions")
 
     print("Step 2: Exporting to CSV ...")
     export_csv(transactions, output_path)
