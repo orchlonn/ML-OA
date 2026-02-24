@@ -34,7 +34,8 @@ def encode_image(image_path):
 def extract_transactions(client, image_path):
     """
     Send the bank statement image to GPT-5.2 and ask it to extract
-    all transactions as structured JSON.
+    all transactions as structured JSON. Dynamically detects the
+    column structure from the image.
     """
     base64_image = encode_image(image_path)
 
@@ -47,18 +48,20 @@ def extract_transactions(client, image_path):
                     {
                         "type": "text",
                         "text": (
-                            "Extract ALL transactions from this bank statement image.\n"
-                            "Return a JSON array where each transaction has these exact keys:\n"
-                            '  "Date Posted", "Value Date", "Cheque Number", "Description", "Amount", "Balance"\n\n'
+                            "Extract ALL transactions from this bank statement image.\n\n"
+                            "Step 1: Identify the column headers exactly as they appear in the table.\n"
+                            "Step 2: Extract every transaction row using those exact column names as JSON keys.\n\n"
+                            "Return a JSON object with two keys:\n"
+                            '  "columns": an array of the column header names exactly as shown in the image\n'
+                            '  "transactions": an array of objects, each using those column names as keys\n\n'
                             "Rules:\n"
-                            "- Date format: DD MAY (e.g. '15 MAY', '27 MAY')\n"
-                            "- The first row is B/F Balance — set Value Date to 'B/F Balance', "
-                            "leave Cheque Number, Description, and Amount empty\n"
-                            "- Cheque Number is empty for all rows in this statement\n"
-                            "- For Description, combine all description lines into a single string separated by spaces\n"
-                            "- Amount values that are debits should end with 'DR' (e.g. '7,010.00DR')\n"
-                            "- Include commas in numbers where appropriate (e.g. '10,053.38')\n"
-                            "- Return ONLY the JSON array, no markdown or explanation"
+                            "- Preserve dates exactly as shown (e.g. '15 MAY', '03/02', 'Mar 15')\n"
+                            "- Preserve numbers exactly as shown, including commas and any suffixes like 'DR' or 'CR'\n"
+                            "- If there is a B/F Balance or Previous Balance row, include it as a transaction\n"
+                            "- Do NOT include summary rows like 'Ending balance' or 'Balance Carried Forward'\n"
+                            "- For multi-line descriptions, combine them into a single string separated by spaces\n"
+                            "- If a cell is empty, use an empty string\n"
+                            "- Return ONLY the JSON object, no markdown or explanation"
                         ),
                     },
                     {
@@ -80,23 +83,15 @@ def extract_transactions(client, image_path):
         raw = raw.split("\n", 1)[1]
         raw = raw.rsplit("```", 1)[0]
 
-    return json.loads(raw)
+    result = json.loads(raw)
+    return result["columns"], result["transactions"]
 
 
-def export_csv(transactions, output_path):
+def export_csv(columns, transactions, output_path):
     """
-    Write transactions to CSV with minimal quoting
-    (only values containing commas are double-quoted).
+    Write transactions to CSV using the detected columns.
+    Only values containing commas are double-quoted.
     """
-    columns = [
-        "Date Posted",
-        "Value Date",
-        "Cheque Number",
-        "Description",
-        "Amount",
-        "Balance",
-    ]
-
     with open(output_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=columns, quoting=csv.QUOTE_MINIMAL)
         writer.writeheader()
@@ -131,6 +126,28 @@ def validate(output_path, reference_path):
     return all_match
 
 
+def process_image(client, image_path, output_path, reference_path=None):
+    """Process a single bank statement image end-to-end."""
+    print(f"Image:  {image_path}")
+    print(f"Output: {output_path}")
+    print()
+
+    print("Step 1: Sending image to GPT-5.2 ...")
+    columns, transactions = extract_transactions(client, image_path)
+    print(f"         Detected columns: {columns}")
+    print(f"         Extracted {len(transactions)} transactions")
+
+    print("Step 2: Exporting to CSV ...")
+    export_csv(columns, transactions, output_path)
+    print(f"         Wrote {len(transactions)} transactions to {output_path}")
+
+    if reference_path and os.path.exists(reference_path):
+        print("\nStep 3: Validating against reference ...")
+        validate(output_path, reference_path)
+
+    print()
+
+
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     image_path = os.path.join(script_dir, "img_sample.jpg")
@@ -143,21 +160,7 @@ def main():
         sys.exit(1)
 
     client = OpenAI()
-
-    print(f"Image: {image_path}")
-    print(f"Output: {output_path}")
-    print()
-
-    print("Step 1: Sending image to GPT-5.2 ...")
-    transactions = extract_transactions(client, image_path)
-    print(f"Extracted {len(transactions)} transactions")
-
-    print("Step 2: Exporting to CSV ...")
-    export_csv(transactions, output_path)
-
-    if os.path.exists(reference_path):
-        print("\nStep 3: Validating against reference ...")
-        validate(output_path, reference_path)
+    process_image(client, image_path, output_path, reference_path)
 
 
 if __name__ == "__main__":
