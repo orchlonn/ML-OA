@@ -117,9 +117,3 @@ python extraction_script.py
 # Or specify custom paths:
 python extraction_script.py <image_path> <output_csv_path>
 ```
-
-## Output
-
-The script produces `transactions.csv` and automatically validates it against `csv_sample.csv`, reporting `VALIDATION PASSED` on success.
-
-# ML-OA
