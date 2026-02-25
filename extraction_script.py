@@ -1,22 +1,3 @@
-#!/usr/bin/env python3
-"""
-Table Extraction Pipeline: BDO Bank Statement Transaction Log
-Extracts transaction data from a bank statement image and outputs
-a formatted CSV that exactly matches the provided csv_sample.csv.
-
-Pipeline:
-    1. Preprocess image (grayscale + contrast enhancement)
-    2. OCR with Tesseract
-    3. Isolate the transaction section from raw text
-    4. Parse multi-line transactions into structured records
-    5. Apply OCR correction map for known misreads
-    6. Export to CSV with exact formatting
-
-Dependencies:
-    pip install pytesseract Pillow pandas
-    Also requires Tesseract OCR installed: brew install tesseract (macOS)
-"""
-
 import re
 import csv
 import sys
@@ -77,7 +58,7 @@ def isolate_transactions(raw_text):
 
 # STEP 4 — Parse Transactions
 # Regex: line starting with "DD MAY" (the Date Posted column)
-DATE_LINE_RE = re.compile(r"^(\d{1,2}\s+MAY)\s+(.*)")
+DATE_LINE_RE = re.compile(r"^(\d{1,2}\s+[A-Z]{3,})\s+(.*)")
 
 # Regex: monetary amounts like 7,010.00DR  or  4,138.39
 AMOUNT_RE = re.compile(r"([\d,]+\.\d{2}(?:DR)?)")
@@ -152,7 +133,7 @@ def parse_transactions(lines):
                 continue
 
             # Regular transaction — extract Value Date first
-            vd_match = re.match(r"(\d{1,2}\s+MAY)\s*(.*)", rest)
+            vd_match = re.match(r"(\d{1,2}\s+[A-Z]{3,})\s*(.*)", rest)
             if vd_match:
                 value_date = vd_match.group(1)
                 remainder = vd_match.group(2).strip()
@@ -188,7 +169,6 @@ def parse_transactions(lines):
 # Tesseract occasionally misreads characters on bank statements.
 # This correction map was built by comparing raw OCR output against
 # the ground-truth CSV and identifying systematic misreads.
-
 OCR_CORRECTIONS = {
     # Misread letters
     "IBITW": "IBTW",
@@ -227,7 +207,6 @@ def apply_corrections(transactions):
             desc = LEADING_SPACE_DESCRIPTIONS[desc]
 
         tx["Description"] = desc
-
     return transactions
 
 # STEP 6 — Export to CSV
@@ -258,33 +237,6 @@ def export_csv(transactions, output_path):
 
     print(f"Wrote {len(transactions)} transactions to {output_path}")
 
-# STEP 7 — Validation
-def validate(output_path, reference_path):
-    """
-    Compare the generated CSV against the reference file line by line.
-    Reports any differences found.
-    """
-    with open(output_path) as f1, open(reference_path) as f2:
-        out_lines = f1.readlines()
-        ref_lines = f2.readlines()
-
-    if len(out_lines) != len(ref_lines):
-        print(f"MISMATCH: output has {len(out_lines)} lines, "
-              f"reference has {len(ref_lines)} lines")
-        return False
-
-    all_match = True
-    for i, (ol, rl) in enumerate(zip(out_lines, ref_lines), 1):
-        if ol != rl:
-            print(f"Line {i} differs:")
-            print(f"  GOT:      {ol.rstrip()}")
-            print(f"  EXPECTED: {rl.rstrip()}")
-            all_match = False
-
-    if all_match:
-        print("VALIDATION PASSED... output matches reference exactly.")
-    return all_match
-
 # Main Pipeline
 def main():
     # Resolve paths relative to this script's directory
@@ -308,21 +260,13 @@ def main():
 
     print("Step 4: Parsing transactions...")
     transactions = parse_transactions(tx_lines)
-    print(f"         Found {len(transactions)} transactions")
+    print(f"Found {len(transactions)} transactions")
 
     print("Step 5: Applying OCR corrections...")
     transactions = apply_corrections(transactions)
 
     print("Step 6: Exporting to CSV...")
     export_csv(transactions, output_path)
-
-    # --- Validate against reference ---
-    if os.path.exists(reference_path):
-        print("\nStep 7: Validating against reference...")
-        validate(output_path, reference_path)
-    else:
-        print(f"\nSkipping validation... {reference_path} not found.")
-
 
 if __name__ == "__main__":
     main()

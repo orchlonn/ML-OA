@@ -1,19 +1,3 @@
-#!/usr/bin/env python3
-"""
-Table Extraction Pipeline: GPT-5.2 (Vision) Approach
-====================================================
-Uses OpenAI's GPT-5.2 to extract transaction data from a bank statement
-image. Unlike the Tesseract approach, this works across different banks
-and layouts without hardcoded markers or correction maps.
-
-Dependencies:
-    pip install openai
-
-Usage:
-    export OPENAI_API_KEY="your-key-here"
-    python extraction_gpt.py
-"""
-
 import os
 import sys
 import csv
@@ -117,8 +101,8 @@ def validate(output_path, reference_path):
     for i, (ol, rl) in enumerate(zip(out_lines, ref_lines), 1):
         if ol != rl:
             print(f"Line {i} differs:")
-            print(f"  GOT:      {ol.rstrip()}")
-            print(f"  EXPECTED: {rl.rstrip()}")
+            print(f"GOT: {ol.rstrip()}")
+            print(f"EXPECTED: {rl.rstrip()}")
             all_match = False
 
     if all_match:
@@ -128,18 +112,18 @@ def validate(output_path, reference_path):
 
 def process_image(client, image_path, output_path, reference_path=None):
     """Process a single bank statement image end-to-end."""
-    print(f"Image:  {image_path}")
-    print(f"Output: {output_path}")
+    print(f"Image: {image_path}")
+    print(f"Output:{output_path}")
     print()
 
     print("Step 1: Sending image to GPT-5.2 ...")
     columns, transactions = extract_transactions(client, image_path)
-    print(f"         Detected columns: {columns}")
-    print(f"         Extracted {len(transactions)} transactions")
+    print(f"Detected columns: {columns}")
+    print(f"Extracted {len(transactions)} transactions")
 
     print("Step 2: Exporting to CSV ...")
     export_csv(columns, transactions, output_path)
-    print(f"         Wrote {len(transactions)} transactions to {output_path}")
+    print(f"Wrote {len(transactions)} transactions to {output_path}")
 
     if reference_path and os.path.exists(reference_path):
         print("\nStep 3: Validating against reference ...")
@@ -153,11 +137,6 @@ def main():
     image_path = os.path.join(script_dir, "img_sample.jpg")
     output_path = os.path.join(script_dir, "transactions_gpt.csv")
     reference_path = os.path.join(script_dir, "csv_sample.csv")
-
-    if not os.environ.get("OPENAI_API_KEY"):
-        print("Error: Set your OPENAI_API_KEY environment variable first.")
-        print("  export OPENAI_API_KEY='your-key-here'")
-        sys.exit(1)
 
     client = OpenAI()
     process_image(client, image_path, output_path, reference_path)
