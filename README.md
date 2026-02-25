@@ -58,10 +58,6 @@ The `csv.DictWriter` with `QUOTE_MINIMAL` quoting ensures:
 - Values without commas are unquoted (e.g. `500.00DR`)
 - Empty fields produce no output between delimiters
 
-### Step 7 — Validation
-
-The script automatically compares the generated `transactions.csv` against `csv_sample.csv` line-by-line and reports any differences.
-
 ## Challenges and Solutions
 
 ### 1. Multi-Line Descriptions
